@@ -1,0 +1,7 @@
+(library
+ (name ppx_forbid)
+ (public_name ppx_forbid)
+ (kind ppx_rewriter)
+ (libraries ppxlib)
+ (preprocess
+  (pps ppxlib.metaquot)))

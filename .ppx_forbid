@@ -1,0 +1,5 @@
+# ppx_forbid configuration for ppx_forbid itself
+# We eat our own dogfood!
+
+# Forbid unsafe modules
+module Obj "Obj is unsafe and breaks type safety"

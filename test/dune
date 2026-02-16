@@ -1,0 +1,6 @@
+(executable
+ (name test_allowed)
+ (modules test_allowed)
+ (libraries unix)
+ (preprocess
+  (pps ppx_forbid)))
