@@ -14,10 +14,16 @@
     Usage: Add to dune file:
       (preprocess (pps ppx_forbid))
 
+    Or with a specific config:
+      (preprocess (pps (ppx_forbid --config .ppx_forbid.tui)))
+
     Suppression: Use [@allow_forbidden "reason"] to suppress the check:
       let x = Unix.open_process_in cmd [@allow_forbidden "legacy code"]
 
     Configuration: Create a .ppx_forbid file in your project root with:
+      # Include another config file (relative to this file's directory)
+      include ../base.ppx_forbid
+
       # Forbid entire modules
       module Obj "Obj is unsafe and breaks type safety"
 
@@ -37,28 +43,35 @@ type forbidden_item =
 
 (** Default forbidden items (used when no config file found) *)
 let default_forbidden : forbidden_item list =
-  [
-    (* === Forbidden modules === *)
-    Module ("Obj", "Obj is unsafe and breaks type safety");
-  ]
+  [Module ("Obj", "Obj is unsafe and breaks type safety")]
+
+(** Config file path override (set via --config flag) *)
+let config_path_override = ref None
 
 (** Parse a config line. Returns None for comments/empty lines. *)
-let parse_config_line line =
+let parse_config_line ~base_dir line =
   let line = String.trim line in
   if String.length line = 0 || line.[0] = '#' then None
   else
     (* Split on first space to get command *)
     match String.index_opt line ' ' with
     | None -> None
-    | Some idx -> (
+    | Some idx ->
         let cmd = String.sub line 0 idx in
         let rest =
           String.trim (String.sub line (idx + 1) (String.length line - idx - 1))
         in
-        match cmd with
-        | "module" -> (
+        (match cmd with
+        | "include" ->
+            (* include path/to/file - returns special marker *)
+            let path =
+              if Filename.is_relative rest then Filename.concat base_dir rest
+              else rest
+            in
+            Some (`Include path)
+        | "module" ->
             (* module Name "reason" *)
-            match String.index_opt rest ' ' with
+            (match String.index_opt rest ' ' with
             | None -> None
             | Some idx2 ->
                 let name = String.sub rest 0 idx2 in
@@ -72,12 +85,12 @@ let parse_config_line line =
                     String.sub reason 1 (String.length reason - 2)
                   else reason
                 in
-                Some (Module (name, reason)))
-        | "function" -> (
+                Some (`Item (Module (name, reason))))
+        | "function" ->
             (* function Module.func "suggestion" *)
-            match String.index_opt rest ' ' with
+            (match String.index_opt rest ' ' with
             | None -> None
-            | Some idx2 -> (
+            | Some idx2 ->
                 let path = String.sub rest 0 idx2 in
                 let suggestion =
                   String.trim
@@ -90,47 +103,60 @@ let parse_config_line line =
                   else suggestion
                 in
                 (* Split path on last dot *)
-                match String.rindex_opt path '.' with
+                (match String.rindex_opt path '.' with
                 | None -> None
                 | Some dot_idx ->
                     let modname = String.sub path 0 dot_idx in
                     let fname =
-                      String.sub
-                        path
-                        (dot_idx + 1)
+                      String.sub path (dot_idx + 1)
                         (String.length path - dot_idx - 1)
                     in
-                    Some (Function (modname, fname, suggestion))))
+                    Some (`Item (Function (modname, fname, suggestion)))))
         | _ -> None)
 
-(** Load config from .ppx_forbid file, falling back to defaults *)
+(** Load config from a file, recursively handling includes *)
+let rec load_config_file ~visited path =
+  if List.mem path visited then [] (* Avoid infinite loops *)
+  else if not (Sys.file_exists path) then []
+  else
+    let base_dir = Filename.dirname path in
+    let ic = open_in path in
+    let rec read_lines acc =
+      match input_line ic with
+      | line -> (
+          match parse_config_line ~base_dir line with
+          | Some (`Include inc_path) ->
+              let included =
+                load_config_file ~visited:(path :: visited) inc_path
+              in
+              read_lines (acc @ included)
+          | Some (`Item item) -> read_lines (acc @ [item])
+          | None -> read_lines acc)
+      | exception End_of_file ->
+          close_in ic ;
+          acc
+    in
+    read_lines []
+
+(** Find config file by walking up directory tree *)
+let rec find_config_file dir =
+  let path = Filename.concat dir ".ppx_forbid" in
+  if Sys.file_exists path then Some path
+  else
+    let parent = Filename.dirname dir in
+    if parent = dir then None else find_config_file parent
+
+(** Load config - uses override if set, otherwise searches *)
 let load_config () =
-  (* Try to find .ppx_forbid in current dir or parents *)
-  let rec find_config dir =
-    let path = Filename.concat dir ".ppx_forbid" in
-    if Sys.file_exists path then Some path
-    else
-      let parent = Filename.dirname dir in
-      if parent = dir then None else find_config parent
+  let path =
+    match !config_path_override with
+    | Some p -> Some p
+    | None -> find_config_file (Sys.getcwd ())
   in
-  match find_config (Sys.getcwd ()) with
+  match path with
   | None -> default_forbidden
-  | Some path ->
-      let ic = open_in path in
-      let rec read_lines acc =
-        match input_line ic with
-        | line ->
-            let acc' =
-              match parse_config_line line with
-              | Some item -> item :: acc
-              | None -> acc
-            in
-            read_lines acc'
-        | exception End_of_file ->
-            close_in ic ;
-            List.rev acc
-      in
-      let items = read_lines [] in
+  | Some p ->
+      let items = load_config_file ~visited:[] p in
       if items = [] then default_forbidden else items
 
 (** Cached config - loaded once per compilation *)
@@ -159,29 +185,22 @@ let check_forbidden loc (lid : Longident.t) =
     (fun item ->
       match (item, module_path) with
       | Module (forbidden_mod, reason), Some m when m = forbidden_mod ->
-          Location.raise_errorf
-            ~loc
+          Location.raise_errorf ~loc
             "Forbidden module: %s is not allowed.@.Reason: %s@.Use \
              [@allow_forbidden \"reason\"] to suppress."
-            forbidden_mod
-            reason
+            forbidden_mod reason
       | Module (forbidden_mod, reason), None when name = forbidden_mod ->
           (* Direct module reference like "open Obj" *)
-          Location.raise_errorf
-            ~loc
+          Location.raise_errorf ~loc
             "Forbidden module: %s is not allowed.@.Reason: %s@.Use \
              [@allow_forbidden \"reason\"] to suppress."
-            forbidden_mod
-            reason
+            forbidden_mod reason
       | Function (modname, fname, suggestion), Some m
         when m = modname && name = fname ->
-          Location.raise_errorf
-            ~loc
+          Location.raise_errorf ~loc
             "Forbidden call: %s.%s is not allowed.@.Suggestion: %s@.Use \
              [@allow_forbidden \"reason\"] to suppress."
-            modname
-            fname
-            suggestion
+            modname fname suggestion
       | _ -> ())
     forbidden_items
 
@@ -243,4 +262,8 @@ let impl str =
   checker#structure str ;
   str
 
-let () = Driver.register_transformation ~impl "ppx_forbid"
+let () =
+  Driver.add_arg "--config"
+    (Arg.String (fun s -> config_path_override := Some s))
+    ~doc:"PATH Path to .ppx_forbid config file" ;
+  Driver.register_transformation ~impl "ppx_forbid"
