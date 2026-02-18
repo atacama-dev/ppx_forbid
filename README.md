@@ -1,22 +1,22 @@
 # ppx_forbid
 
-A configurable PPX rewriter that forbids specific function calls or modules at compile time.
+[![CI](https://github.com/atacama-dev/ppx_forbid/actions/workflows/ci.yml/badge.svg)](https://github.com/atacama-dev/ppx_forbid/actions/workflows/ci.yml)
 
-## Overview
+A configurable OCaml PPX that raises **compile-time errors** when forbidden functions or modules are used. Enforce coding standards automatically -- no more "please don't use X" in code review.
 
-`ppx_forbid` helps enforce coding standards by raising compilation errors when forbidden functions or modules are used. Common use cases:
+## Use cases
 
-- **Eio projects**: Forbid blocking `Unix.open_process_in`, `Unix.sleep`, `Thread.create` to ensure non-blocking code
-- **Safety**: Forbid `Obj.magic` and other unsafe operations  
-- **API migration**: Forbid deprecated functions with suggestions for replacements
+- **Eio migration**: ban blocking `Unix.open_process_in`, `Unix.sleep`, `Thread.create`
+- **Safety**: ban `Obj.magic` and other unsafe operations
+- **TUI apps**: ban `print_endline` / `Printf.printf` (they corrupt the terminal)
+- **Theming**: ban hardcoded color functions, enforce themed helpers
+- **API migration**: ban deprecated functions with actionable suggestions
 
-## Installation
+## Quick start
 
 ```bash
 opam install ppx_forbid
 ```
-
-## Usage
 
 Add to your `dune` file:
 
@@ -26,69 +26,112 @@ Add to your `dune` file:
  (preprocess (pps ppx_forbid)))
 ```
 
-## Configuration
-
-Create a `.ppx_forbid` file in your project root:
+Create a `.ppx_forbid` config in your project:
 
 ```
-# Forbid entire modules
 module Obj "Obj is unsafe and breaks type safety"
-
-# Forbid specific functions with suggestions
-function Unix.open_process_in "Use Eio.Process.run instead"
 function Unix.sleep "Use Eio.Time.sleep"
 function Thread.create "Use Eio.Fiber.fork"
 ```
 
-If no config file is found, only `Obj` is forbidden by default.
-
-## Suppression
-
-Use `[@allow_forbidden "reason"]` to suppress the check when necessary:
-
-```ocaml
-(* Allowed with justification *)
-let result = 
-  (Obj.magic value : target_type) 
-  [@allow_forbidden "FFI boundary requires type coercion"]
-
-(* Allowed on entire binding *)
-let legacy_wrapper =
-  (fun cmd -> Unix.open_process_in cmd)
-  [@allow_forbidden "Legacy code - TODO: migrate to Eio"]
-```
-
-## Example Error
+That's it. Any use of `Obj`, `Unix.sleep`, or `Thread.create` will now fail to compile:
 
 ```
 File "src/myfile.ml", line 42, characters 10-30:
-42 |   let ic = Unix.open_process_in cmd in
-              ^^^^^^^^^^^^^^^^^^^^
-Error: Forbidden call: Unix.open_process_in is not allowed.
-Suggestion: Use Eio.Process.run instead
+42 |   let _ = Unix.sleep 5 in
+              ^^^^^^^^^^
+Error: Forbidden call: Unix.sleep is not allowed.
+Suggestion: Use Eio.Time.sleep
 Use [@allow_forbidden "reason"] to suppress.
 ```
 
-## Config File Format
+Unqualified Stdlib functions are also caught -- `prerr_endline` matches a `function Stdlib.prerr_endline` rule.
+
+## Config file format
 
 ```
 # Comments start with #
 
-# Forbid a module (all functions)
+# Forbid an entire module
 module <ModuleName> "<reason>"
 
 # Forbid a specific function
-function <Module.function> "<suggestion>"
+function <Module.function_name> "<suggestion>"
+
+# Include another config file (paths relative to this file)
+include ../base.ppx_forbid
 ```
 
-## Default Rules
+### Per-directory configs
 
-When no `.ppx_forbid` file is found:
+The PPX searches for `.ppx_forbid` starting from the **source file's directory** and walking up to the project root. This lets you have stricter rules for specific subdirectories:
+
+```
+project/
+  .ppx_forbid              # project-wide rules
+  src/
+    ui/
+      .ppx_forbid          # UI-specific rules (can `include ../../.ppx_forbid`)
+```
+
+You can also pass an explicit config path:
+
+```dune
+(preprocess (pps (ppx_forbid --config .ppx_forbid.strict)))
+```
+
+## Suppression
+
+When you genuinely need a forbidden function, annotate with `[@allow_forbidden "reason"]`:
+
+```ocaml
+(* On an expression *)
+let raw = (Obj.magic ptr : bytes) [@allow_forbidden "FFI boundary"]
+
+(* On a binding *)
+let[@allow_forbidden "logger writes to stderr by design"] log msg =
+  prerr_endline msg
+```
+
+The reason string is required and documents *why* the exception is acceptable.
+
+## Default rules
+
+When no `.ppx_forbid` file is found, a single default rule applies:
 
 | Item | Reason |
 |------|--------|
 | `Obj` (module) | Obj is unsafe and breaks type safety |
 
+## Real-world example
+
+Project-wide config (`.ppx_forbid`):
+
+```
+module Obj "Obj is unsafe and breaks type safety"
+
+function Unix.open_process_in "Use Eio.Process.run or Common.run_out"
+function Unix.open_process_out "Use Eio.Process.run"
+function Unix.system "Use Eio.Process.run or Common.run"
+function Unix.sleep "Use Eio.Time.sleep"
+function Thread.create "Use Eio.Fiber.fork or Eio.Fiber.fork_daemon"
+```
+
+TUI-specific config (`src/ui/.ppx_forbid`):
+
+```
+include ../../.ppx_forbid
+
+function Stdlib.print_endline "Use logging or TUI display functions"
+function Stdlib.prerr_endline "Use logging or Toast notifications"
+function Printf.printf "Use logging or TUI display functions"
+```
+
+## Requirements
+
+- OCaml >= 4.14
+- ppxlib >= 0.28.0
+
 ## License
 
-MIT
+[GPL-3.0-or-later](LICENSE)
