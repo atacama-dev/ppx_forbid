@@ -1,7 +1,7 @@
 (******************************************************************************)
 (*                                                                            *)
 (* SPDX-License-Identifier: GPL-3.0-or-later                                               *)
-(* Copyright (c) 2026 Mathias Bourgoin <mathias.bourgoin@atacama.tech>                                      *)
+(* Copyright (c) 2026 Mathias Bourgoin <mathias.bourgoin@atacama.tech>        *)
 (*                                                                            *)
 (******************************************************************************)
 

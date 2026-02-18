@@ -9,7 +9,7 @@ coding standards like 'use Eio instead of blocking Unix calls' or
 'never use Obj.magic'. Supports per-project configuration via .ppx_forbid 
 files and [@allow_forbidden] attributes for suppression."""
 maintainer: ["mathias.bourgoin@atacama.tech"]
-authors: ["Mathias Bourgoin"]
+authors: ["Mathias Bourgoin <mathias.bourgoin@atacama.tech>"]
 license: "GPL-3.0-or-later"
 tags: ["ppx" "lint" "static-analysis"]
 homepage: "https://github.com/atacama-dev/ppx_forbid"

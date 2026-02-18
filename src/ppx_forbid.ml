@@ -1,7 +1,7 @@
 (******************************************************************************)
 (*                                                                            *)
 (* SPDX-License-Identifier: GPL-3.0-or-later                                               *)
-(* Copyright (c) 2026 Mathias Bourgoin <mathias.bourgoin@atacama.tech>                                      *)
+(* Copyright (c) 2026 Mathias Bourgoin <mathias.bourgoin@atacama.tech>        *)
 (*                                                                            *)
 (******************************************************************************)
 
@@ -146,12 +146,19 @@ let rec find_config_file dir =
     let parent = Filename.dirname dir in
     if parent = dir then None else find_config_file parent
 
-(** Load config - uses override if set, otherwise searches *)
+(** Source file directory - set when processing a file *)
+let source_dir = ref None
+
+(** Load config - uses override if set, otherwise searches from source dir *)
 let load_config () =
   let path =
     match !config_path_override with
     | Some p -> Some p
-    | None -> find_config_file (Sys.getcwd ())
+    | None ->
+        let start_dir =
+          match !source_dir with Some d -> d | None -> Sys.getcwd ()
+        in
+        find_config_file start_dir
   in
   match path with
   | None -> default_forbidden
@@ -159,8 +166,16 @@ let load_config () =
       let items = load_config_file ~visited:[] p in
       if items = [] then default_forbidden else items
 
-(** Cached config - loaded once per compilation *)
-let forbidden = lazy (load_config ())
+(** Mutable config - reloaded when source file changes *)
+let forbidden_items = ref None
+
+let get_forbidden () =
+  match !forbidden_items with
+  | Some items -> items
+  | None ->
+      let items = load_config () in
+      forbidden_items := Some items ;
+      items
 
 (** Check if attributes contain [@allow_forbidden] *)
 let has_allow_forbidden attrs =
@@ -179,7 +194,7 @@ let check_forbidden loc (lid : Longident.t) =
     | Longident.Lapply _ -> (None, "")
   in
   let module_path, name = get_module_path lid in
-  let forbidden_items = Lazy.force forbidden in
+  let items = get_forbidden () in
   (* Check against forbidden list *)
   List.iter
     (fun item ->
@@ -201,8 +216,15 @@ let check_forbidden loc (lid : Longident.t) =
             "Forbidden call: %s.%s is not allowed.@.Suggestion: %s@.Use \
              [@allow_forbidden \"reason\"] to suppress."
             modname fname suggestion
+      | Function (modname, fname, suggestion), None
+        when modname = "Stdlib" && name = fname ->
+          (* Unqualified Stdlib functions: prerr_endline, print_string, etc. *)
+          Location.raise_errorf ~loc
+            "Forbidden call: %s.%s is not allowed.@.Suggestion: %s@.Use \
+             [@allow_forbidden \"reason\"] to suppress."
+            modname fname suggestion
       | _ -> ())
-    forbidden_items
+    items
 
 (** AST traversal that checks all expressions and module expressions.
     Uses a mutable flag to track when we're inside an allowed region. *)
@@ -257,8 +279,56 @@ let checker =
       else super#value_binding vb
   end
 
+(** Strip dune sandbox/build prefix to get source path.
+    Paths like _build/.sandbox/.../default/src/foo.ml -> src/foo.ml
+    Or _build/default/src/foo.ml -> src/foo.ml *)
+let strip_build_prefix path =
+  (* Look for /default/ which marks the end of dune build prefix *)
+  match String.split_on_char '/' path with
+  | parts ->
+      let rec find_default = function
+        | [] -> None
+        | "default" :: rest -> Some rest
+        | _ :: rest -> find_default rest
+      in
+      (match find_default parts with
+      | Some rest -> Some (String.concat "/" rest)
+      | None -> None)
+
 (** The PPX driver entry point *)
 let impl str =
+  (* Set source directory from first structure item's location *)
+  (match str with
+  | {pstr_loc; _} :: _ when pstr_loc.loc_start.pos_fname <> "" ->
+      let file = pstr_loc.loc_start.pos_fname in
+      (* Handle relative paths by making them absolute from cwd *)
+      let file =
+        if Filename.is_relative file then Filename.concat (Sys.getcwd ()) file
+        else file
+      in
+      (* Strip dune build directory prefix if present *)
+      let file =
+        match strip_build_prefix file with
+        | Some relative ->
+            (* Find project root by looking for dune-project *)
+            let rec find_root dir =
+              if Sys.file_exists (Filename.concat dir "dune-project") then
+                Some dir
+              else
+                let parent = Filename.dirname dir in
+                if parent = dir then None else find_root parent
+            in
+            (match find_root (Sys.getcwd ()) with
+            | Some root -> Filename.concat root relative
+            | None -> file)
+        | None -> file
+      in
+      let dir = Filename.dirname file in
+      (* Only update if different from current - avoids reloading config *)
+      if !source_dir <> Some dir then (
+        source_dir := Some dir ;
+        forbidden_items := None)
+  | _ -> ()) ;
   checker#structure str ;
   str
 
