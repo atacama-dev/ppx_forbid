@@ -1,0 +1,2 @@
+# ppx_enforce config for tests
+call Registry.register "Must call Registry.register ~name ~mli () in this file"

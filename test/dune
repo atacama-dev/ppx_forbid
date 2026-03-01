@@ -4,3 +4,15 @@
  (libraries unix)
  (preprocess
   (pps ppx_forbid)))
+
+(executable
+ (name test_enforce_present)
+ (modules test_enforce_present)
+ (preprocess
+  (pps ppx_enforce)))
+
+(executable
+ (name test_enforce_exempt)
+ (modules test_enforce_exempt)
+ (preprocess
+  (pps ppx_enforce)))

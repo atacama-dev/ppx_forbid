@@ -1,6 +1,16 @@
 (library
  (name ppx_forbid)
  (public_name ppx_forbid)
+ (modules ppx_forbid)
+ (kind ppx_rewriter)
+ (libraries ppxlib)
+ (preprocess
+  (pps ppxlib.metaquot)))
+
+(library
+ (name ppx_enforce)
+ (public_name ppx_enforce)
+ (modules ppx_enforce)
  (kind ppx_rewriter)
  (libraries ppxlib)
  (preprocess
