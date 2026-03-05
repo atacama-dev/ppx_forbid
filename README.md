@@ -58,6 +58,9 @@ module <ModuleName> "<reason>"
 # Forbid a specific function
 function <Module.function_name> "<suggestion>"
 
+# Enable pattern detection
+pattern unresolved_lwt
+
 # Include another config file (paths relative to this file)
 include ../base.ppx_forbid
 ```
@@ -94,6 +97,37 @@ let[@allow_forbidden "logger writes to stderr by design"] log msg =
 ```
 
 The reason string is required and documents *why* the exception is acceptable.
+
+## Pattern Detection
+
+Beyond forbidding specific functions or modules, ppx_forbid can detect dangerous code patterns.
+
+### Unresolved Lwt.t Bindings
+
+Catches cases where Lwt promises are bound but never resolved, which can lead to promises being garbage collected before execution.
+
+Enable in `.ppx_forbid`:
+```
+pattern unresolved_lwt
+```
+
+**Examples:**
+
+❌ **Forbidden** (promise may be garbage collected):
+```ocaml
+let _ : unit Lwt.t = async_operation ()
+let _ignored : int Lwt.t = fetch_data ()
+```
+
+✅ **Allowed** (promise is resolved or explicitly ignored):
+```ocaml
+let* () = async_operation ()              (* Resolved with let* *)
+let+ x = fetch_data ()                     (* Resolved with let+ *)
+Lwt.ignore_result (async_operation ())     (* Explicitly ignored *)
+let x = async_operation ()                 (* Named binding - compiler warns if unused *)
+```
+
+**Note:** This check only applies when type annotations are explicit (`: unit Lwt.t`). Adding type annotations to side-effectful Lwt code is recommended for safety.
 
 ## Default rules
 

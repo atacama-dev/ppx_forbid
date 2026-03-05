@@ -1,0 +1,2 @@
+# Enable pattern detection for unresolved Lwt.t bindings
+pattern unresolved_lwt
