@@ -40,6 +40,10 @@ type forbidden_item =
   | Module of string * string  (** Entire module is forbidden, with reason *)
   | Function of string * string * string
       (** Specific function: (module, function, suggestion) *)
+  | Pattern of pattern_kind  (** Code pattern detection *)
+
+and pattern_kind =
+  | Unresolved_lwt  (** Lwt.t values bound but not resolved *)
 
 (** Default forbidden items (used when no config file found) *)
 let default_forbidden : forbidden_item list =
@@ -69,6 +73,12 @@ let parse_config_line ~base_dir line =
               else rest
             in
             Some (`Include path)
+        | "pattern" ->
+            (* pattern unresolved_lwt *)
+            let pattern_name = String.trim rest in
+            (match pattern_name with
+            | "unresolved_lwt" -> Some (`Item (Pattern Unresolved_lwt))
+            | _ -> None)
         | "module" ->
             (* module Name "reason" *)
             (match String.index_opt rest ' ' with
@@ -223,8 +233,37 @@ let check_forbidden loc (lid : Longident.t) =
             "Forbidden call: %s.%s is not allowed.@.Suggestion: %s@.Use \
              [@allow_forbidden \"reason\"] to suppress."
             modname fname suggestion
-      | _ -> ())
+       | _ -> ())
     items
+
+(** Check if pattern rule is enabled in config *)
+let has_pattern_enabled pattern_kind =
+  List.exists
+    (function Pattern pk -> pk = pattern_kind | _ -> false)
+    (get_forbidden ())
+
+(** Check if a core_type represents '_ Lwt.t' *)
+let is_lwt_t (typ : core_type) : bool =
+  match typ.ptyp_desc with
+  | Ptyp_constr ({txt = Ldot (Lident "Lwt", "t"); _}, [_]) -> true
+  | Ptyp_constr ({txt = Ldot (path, "t"); _}, [_]) ->
+      (* Handle nested modules: Foo.Bar.Lwt.t *)
+      let rec ends_with_lwt = function
+        | Longident.Lident "Lwt" -> true
+        | Longident.Ldot (_, "Lwt") -> true
+        | Longident.Ldot (p, _) -> ends_with_lwt p
+        | _ -> false
+      in
+      ends_with_lwt path
+  | _ -> false
+
+(** Check if pattern is a wildcard or ignored variable *)
+let is_ignored_pattern (pat : pattern) : bool =
+  match pat.ppat_desc with
+  | Ppat_any -> true  (* _ *)
+  | Ppat_var {txt; _} when String.length txt > 0 && txt.[0] = '_' ->
+      true  (* _ignored, _unused, etc. *)
+  | _ -> false
 
 (** AST traversal that checks all expressions and module expressions.
     Uses a mutable flag to track when we're inside an allowed region. *)
@@ -276,7 +315,22 @@ let checker =
       (* If the binding has the attribute, allow everything inside *)
       if has_allow_forbidden vb.pvb_attributes then
         self#with_allow (fun () -> super#value_binding vb)
-      else super#value_binding vb
+      else (
+        (* Check for unresolved Lwt.t pattern *)
+        if not self#is_allowed && has_pattern_enabled Unresolved_lwt then (
+          (* Check if pattern has type constraint *)
+          match vb.pvb_pat.ppat_desc with
+          | Ppat_constraint (pat, typ)
+            when is_lwt_t typ && is_ignored_pattern pat ->
+              (* Also check if the RHS expression has [@allow_forbidden] *)
+              if not (has_allow_forbidden vb.pvb_expr.pexp_attributes) then
+                Location.raise_errorf ~loc:vb.pvb_loc
+                  "Unresolved Lwt.t binding: Lwt.t promises must be resolved.@.\
+                   Use let* or let+ to resolve the promise, or use \
+                   Lwt.ignore_result to explicitly ignore.@.\
+                   Use [@allow_forbidden \"reason\"] to suppress this check."
+          | _ -> ()) ;
+        super#value_binding vb)
   end
 
 (** Strip dune sandbox/build prefix to get source path.

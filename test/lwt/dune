@@ -1,0 +1,34 @@
+(executable
+ (name resolved_good)
+ (modules resolved_good)
+ (libraries lwt lwt.unix)
+ (preprocess (pps ppx_forbid)))
+
+(executable
+ (name allowed)
+ (modules allowed)
+ (libraries lwt)
+ (preprocess (pps ppx_forbid)))
+
+(library
+ (name should_fail_lib)
+ (modules unresolved_bad)
+ (libraries lwt)
+ (preprocess (pps ppx_forbid)))
+
+(rule
+ (alias runtest)
+ (action
+  (run %{exe:resolved_good.exe})))
+
+(rule
+ (alias runtest)
+ (action
+  (run %{exe:allowed.exe})))
+
+; Test that the bad file fails compilation
+(rule
+ (alias runtest-expected-failure)
+ (action
+  (with-accepted-exit-codes (not 0)
+   (run dune build %{lib:should_fail_lib:should_fail_lib}))))
