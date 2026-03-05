@@ -16,6 +16,12 @@
  (libraries lwt)
  (preprocess (pps ppx_forbid)))
 
+(library
+ (name nested_fail_lib)
+ (modules nested_only)
+ (libraries lwt)
+ (preprocess (pps ppx_forbid)))
+
 (rule
  (alias runtest)
  (action
@@ -32,3 +38,10 @@
  (action
   (with-accepted-exit-codes (not 0)
    (run dune build %{lib:should_fail_lib:should_fail_lib}))))
+
+; Test that nested bad patterns also fail
+(rule
+ (alias runtest-expected-failure)
+ (action
+  (with-accepted-exit-codes (not 0)
+   (run dune build %{lib:nested_fail_lib:nested_fail_lib}))))
