@@ -6,22 +6,22 @@
 (******************************************************************************)
 
 (** PPX rewriter that enforces the presence of specific function calls at
-    compile time.  The mirror of [ppx_forbid]: raises a compilation error when
-    a required call is *absent* from a source file.
+    compile time. The mirror of [ppx_forbid]: raises a compilation error when a
+    required call is *absent* from a source file.
 
-    Usage: Add to dune file:
-      (preprocess (pps ppx_enforce))
+    Usage: Add to dune file: (preprocess (pps ppx_enforce))
 
     Suppression: Add [[@@@enforce_exempt]] at the top of a file to skip all
-    enforcement checks for that file:
-      [@@@enforce_exempt]   (* this file is intentionally exempt *)
+    enforcement checks for that file: [@@@enforce_exempt] (* this file is
+    intentionally exempt *)
 
     Or exempt a specific requirement:
-      [@@@enforce_exempt "Miaou_registry.register"]
+    [@@@enforce_exempt "Miaou_registry.register"]
 
-    Configuration: Create a .ppx_enforce file in your project root with:
-      # Enforce that Miaou_registry.register is called somewhere in the file
-      call Miaou_registry.register "Widget must self-register via Miaou_registry.register ~name ~mli:[%blob ...]"
+    Configuration: Create a .ppx_enforce file in your project root with: #
+    Enforce that Miaou_registry.register is called somewhere in the file call
+    Miaou_registry.register "Widget must self-register via
+    Miaou_registry.register ~name ~mli:[%blob ...]"
 
     If no config file is found, no requirements are enforced. *)
 
@@ -43,17 +43,17 @@ let parse_config_line line =
   else
     match String.index_opt line ' ' with
     | None -> None
-    | Some idx ->
+    | Some idx -> (
         let cmd = String.sub line 0 idx in
         let rest =
           String.trim (String.sub line (idx + 1) (String.length line - idx - 1))
         in
-        (match cmd with
-        | "call" ->
+        match cmd with
+        | "call" -> (
             (* call Module.function "message" *)
-            (match String.index_opt rest ' ' with
+            match String.index_opt rest ' ' with
             | None -> None
-            | Some idx2 ->
+            | Some idx2 -> (
                 let path = String.sub rest 0 idx2 in
                 let message =
                   String.trim
@@ -64,7 +64,7 @@ let parse_config_line line =
                     String.sub message 1 (String.length message - 2)
                   else message
                 in
-                (match String.rindex_opt path '.' with
+                match String.rindex_opt path '.' with
                 | None -> None
                 | Some dot ->
                     let modname = String.sub path 0 dot in
@@ -86,7 +86,7 @@ let load_config_file path =
           | Some item -> read_lines (item :: acc)
           | None -> read_lines acc)
       | exception End_of_file ->
-          close_in ic ;
+          close_in ic;
           List.rev acc
     in
     read_lines []
@@ -120,42 +120,45 @@ let get_required () =
   | Some items -> items
   | None ->
       let items = load_config () in
-      required_items := Some items ;
+      required_items := Some items;
       items
 
 (** Strip dune sandbox/build prefix to get source path. *)
 let strip_build_prefix path =
   match String.split_on_char '/' path with
-  | parts ->
+  | parts -> (
       let rec find_default = function
         | [] -> None
         | "default" :: rest -> Some rest
         | _ :: rest -> find_default rest
       in
-      (match find_default parts with
+      match find_default parts with
       | Some rest -> Some (String.concat "/" rest)
       | None -> None)
 
-(** Check for [@@@enforce_exempt] or [@@@enforce_exempt "Mod.fn"] attributes
-    at the structure level. Returns:
-    - `All    → file is fully exempt
-    - `Some s → only the named requirement is exempt
-    Returns a list of exemptions. *)
+(** Check for [@@@enforce_exempt] or [@@@enforce_exempt "Mod.fn"] attributes at
+    the structure level. Returns:
+    - `All → file is fully exempt
+    - `Some s → only the named requirement is exempt Returns a list of
+      exemptions. *)
 let collect_exemptions str =
   List.filter_map
     (fun item ->
       match item.pstr_desc with
       | Pstr_attribute attr
-        when String.equal attr.attr_name.txt "enforce_exempt" ->
-          (match attr.attr_payload with
+        when String.equal attr.attr_name.txt "enforce_exempt" -> (
+          match attr.attr_payload with
           | PStr [] -> Some `All
           | PStr
               [
                 {
                   pstr_desc =
                     Pstr_eval
-                      ({pexp_desc = Pexp_constant (Pconst_string (s, _, _)); _},
-                      _);
+                      ( {
+                          pexp_desc = Pexp_constant (Pconst_string (s, _, _));
+                          _;
+                        },
+                        _ );
                   _;
                 };
               ] ->
@@ -173,7 +176,7 @@ let contains_call str modname fname =
 
       method! expression expr =
         (match expr.pexp_desc with
-        | Pexp_ident {txt; _} -> (
+        | Pexp_ident { txt; _ } -> (
             match txt with
             | Longident.Ldot (Longident.Lident m, f)
               when String.equal m modname && String.equal f fname ->
@@ -187,18 +190,18 @@ let contains_call str modname fname =
                 in
                 if String.equal (flatten outer) modname then found := true
             | _ -> ())
-        | _ -> ()) ;
+        | _ -> ());
         super#expression expr
     end
   in
-  searcher#structure str ;
+  searcher#structure str;
   !found
 
 (** The PPX implementation: check that each required call is present. *)
 let impl str =
   (* Set source directory from first item's location *)
   (match str with
-  | {pstr_loc; _} :: _ when pstr_loc.loc_start.pos_fname <> "" ->
+  | { pstr_loc; _ } :: _ when pstr_loc.loc_start.pos_fname <> "" ->
       let file = pstr_loc.loc_start.pos_fname in
       let file =
         if Filename.is_relative file then Filename.concat (Sys.getcwd ()) file
@@ -206,7 +209,7 @@ let impl str =
       in
       let file =
         match strip_build_prefix file with
-        | Some relative ->
+        | Some relative -> (
             let rec find_root dir =
               if Sys.file_exists (Filename.concat dir "dune-project") then
                 Some dir
@@ -214,16 +217,16 @@ let impl str =
                 let parent = Filename.dirname dir in
                 if parent = dir then None else find_root parent
             in
-            (match find_root (Sys.getcwd ()) with
+            match find_root (Sys.getcwd ()) with
             | Some root -> Filename.concat root relative
             | None -> file)
         | None -> file
       in
       let dir = Filename.dirname file in
       if !source_dir <> Some dir then (
-        source_dir := Some dir ;
+        source_dir := Some dir;
         required_items := None)
-  | _ -> ()) ;
+  | _ -> ());
   let items = get_required () in
   if items = [] then str
   else
@@ -245,16 +248,16 @@ let impl str =
               match str with item :: _ -> item.pstr_loc | [] -> Location.none
             in
             Location.raise_errorf ~loc
-              "Missing required call: %s.%s@.%s@.Use [@@@enforce_exempt \"%s\"] \
-               to suppress for this file."
+              "Missing required call: %s.%s@.%s@.Use [@@@enforce_exempt \
+               \"%s\"] to suppress for this file."
               modname fname message key
           end)
-        items ;
+        items;
       str
     end
 
 let () =
   Driver.add_arg "--config"
     (Arg.String (fun s -> config_path_override := Some s))
-    ~doc:"PATH Path to .ppx_enforce config file" ;
+    ~doc:"PATH Path to .ppx_enforce config file";
   Driver.register_transformation ~impl "ppx_enforce"

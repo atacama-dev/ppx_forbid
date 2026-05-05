@@ -5,31 +5,29 @@
 (*                                                                            *)
 (******************************************************************************)
 
-(** PPX rewriter that forbids specific function calls or modules at compile time.
+(** PPX rewriter that forbids specific function calls or modules at compile
+    time.
 
     This PPX traverses the AST and raises compilation errors when forbidden
     functions or modules are used. Useful for enforcing coding standards like
     "use Eio instead of blocking Unix calls" or "never use Obj.magic".
 
-    Usage: Add to dune file:
-      (preprocess (pps ppx_forbid))
+    Usage: Add to dune file: (preprocess (pps ppx_forbid))
 
-    Or with a specific config:
-      (preprocess (pps (ppx_forbid --config .ppx_forbid.tui)))
+    Or with a specific config: (preprocess (pps (ppx_forbid --config
+    .ppx_forbid.tui)))
 
-    Suppression: Use [@allow_forbidden "reason"] to suppress the check:
-      let x = Unix.open_process_in cmd [@allow_forbidden "legacy code"]
+    Suppression: Use [@allow_forbidden "reason"] to suppress the check: let x =
+    Unix.open_process_in cmd [@allow_forbidden "legacy code"]
 
-    Configuration: Create a .ppx_forbid file in your project root with:
-      # Include another config file (relative to this file's directory)
-      include ../base.ppx_forbid
+    Configuration: Create a .ppx_forbid file in your project root with: #
+    Include another config file (relative to this file's directory) include
+    ../base.ppx_forbid
 
-      # Forbid entire modules
-      module Obj "Obj is unsafe and breaks type safety"
+    # Forbid entire modules module Obj "Obj is unsafe and breaks type safety"
 
-      # Forbid specific functions
-      function Unix.open_process_in "Use Eio.Process instead"
-      function Unix.sleep "Use Eio.Time.sleep"
+    # Forbid specific functions function Unix.open_process_in "Use Eio.Process
+    instead" function Unix.sleep "Use Eio.Time.sleep"
 
     If no config file is found, a default set of rules is used. *)
 
@@ -43,7 +41,7 @@ type forbidden_item =
 
 (** Default forbidden items (used when no config file found) *)
 let default_forbidden : forbidden_item list =
-  [Module ("Obj", "Obj is unsafe and breaks type safety")]
+  [ Module ("Obj", "Obj is unsafe and breaks type safety") ]
 
 (** Config file path override (set via --config flag) *)
 let config_path_override = ref None
@@ -56,12 +54,12 @@ let parse_config_line ~base_dir line =
     (* Split on first space to get command *)
     match String.index_opt line ' ' with
     | None -> None
-    | Some idx ->
+    | Some idx -> (
         let cmd = String.sub line 0 idx in
         let rest =
           String.trim (String.sub line (idx + 1) (String.length line - idx - 1))
         in
-        (match cmd with
+        match cmd with
         | "include" ->
             (* include path/to/file - returns special marker *)
             let path =
@@ -69,9 +67,9 @@ let parse_config_line ~base_dir line =
               else rest
             in
             Some (`Include path)
-        | "module" ->
+        | "module" -> (
             (* module Name "reason" *)
-            (match String.index_opt rest ' ' with
+            match String.index_opt rest ' ' with
             | None -> None
             | Some idx2 ->
                 let name = String.sub rest 0 idx2 in
@@ -86,11 +84,11 @@ let parse_config_line ~base_dir line =
                   else reason
                 in
                 Some (`Item (Module (name, reason))))
-        | "function" ->
+        | "function" -> (
             (* function Module.func "suggestion" *)
-            (match String.index_opt rest ' ' with
+            match String.index_opt rest ' ' with
             | None -> None
-            | Some idx2 ->
+            | Some idx2 -> (
                 let path = String.sub rest 0 idx2 in
                 let suggestion =
                   String.trim
@@ -103,7 +101,7 @@ let parse_config_line ~base_dir line =
                   else suggestion
                 in
                 (* Split path on last dot *)
-                (match String.rindex_opt path '.' with
+                match String.rindex_opt path '.' with
                 | None -> None
                 | Some dot_idx ->
                     let modname = String.sub path 0 dot_idx in
@@ -130,10 +128,10 @@ let rec load_config_file ~visited path =
                 load_config_file ~visited:(path :: visited) inc_path
               in
               read_lines (acc @ included)
-          | Some (`Item item) -> read_lines (acc @ [item])
+          | Some (`Item item) -> read_lines (acc @ [ item ])
           | None -> read_lines acc)
       | exception End_of_file ->
-          close_in ic ;
+          close_in ic;
           acc
     in
     read_lines []
@@ -174,7 +172,7 @@ let get_forbidden () =
   | Some items -> items
   | None ->
       let items = load_config () in
-      forbidden_items := Some items ;
+      forbidden_items := Some items;
       items
 
 (** Check if attributes contain [@allow_forbidden] *)
@@ -226,17 +224,16 @@ let check_forbidden loc (lid : Longident.t) =
       | _ -> ())
     items
 
-(** AST traversal that checks all expressions and module expressions.
-    Uses a mutable flag to track when we're inside an allowed region. *)
+(** AST traversal that checks all expressions and module expressions. Uses a
+    mutable flag to track when we're inside an allowed region. *)
 let checker =
   object (self)
     inherit Ast_traverse.iter as super
-
     val mutable allow_stack = 0
 
     method private with_allow f =
-      allow_stack <- allow_stack + 1 ;
-      f () ;
+      allow_stack <- allow_stack + 1;
+      f ();
       allow_stack <- allow_stack - 1
 
     method private is_allowed = allow_stack > 0
@@ -248,8 +245,8 @@ let checker =
       else (
         (if not self#is_allowed then
            match expr.pexp_desc with
-           | Pexp_ident {txt; loc} -> check_forbidden loc txt
-           | _ -> ()) ;
+           | Pexp_ident { txt; loc } -> check_forbidden loc txt
+           | _ -> ());
         super#expression expr)
 
     method! module_expr mexpr =
@@ -258,8 +255,8 @@ let checker =
       else (
         (if not self#is_allowed then
            match mexpr.pmod_desc with
-           | Pmod_ident {txt; loc} -> check_forbidden loc txt
-           | _ -> ()) ;
+           | Pmod_ident { txt; loc } -> check_forbidden loc txt
+           | _ -> ());
         super#module_expr mexpr)
 
     method! open_declaration od =
@@ -268,8 +265,8 @@ let checker =
       else (
         (if not self#is_allowed then
            match od.popen_expr.pmod_desc with
-           | Pmod_ident {txt; loc} -> check_forbidden loc txt
-           | _ -> ()) ;
+           | Pmod_ident { txt; loc } -> check_forbidden loc txt
+           | _ -> ());
         super#open_declaration od)
 
     method! value_binding vb =
@@ -279,19 +276,19 @@ let checker =
       else super#value_binding vb
   end
 
-(** Strip dune sandbox/build prefix to get source path.
-    Paths like _build/.sandbox/.../default/src/foo.ml -> src/foo.ml
-    Or _build/default/src/foo.ml -> src/foo.ml *)
+(** Strip dune sandbox/build prefix to get source path. Paths like
+    _build/.sandbox/.../default/src/foo.ml -> src/foo.ml Or
+    _build/default/src/foo.ml -> src/foo.ml *)
 let strip_build_prefix path =
   (* Look for /default/ which marks the end of dune build prefix *)
   match String.split_on_char '/' path with
-  | parts ->
+  | parts -> (
       let rec find_default = function
         | [] -> None
         | "default" :: rest -> Some rest
         | _ :: rest -> find_default rest
       in
-      (match find_default parts with
+      match find_default parts with
       | Some rest -> Some (String.concat "/" rest)
       | None -> None)
 
@@ -299,7 +296,7 @@ let strip_build_prefix path =
 let impl str =
   (* Set source directory from first structure item's location *)
   (match str with
-  | {pstr_loc; _} :: _ when pstr_loc.loc_start.pos_fname <> "" ->
+  | { pstr_loc; _ } :: _ when pstr_loc.loc_start.pos_fname <> "" ->
       let file = pstr_loc.loc_start.pos_fname in
       (* Handle relative paths by making them absolute from cwd *)
       let file =
@@ -309,7 +306,7 @@ let impl str =
       (* Strip dune build directory prefix if present *)
       let file =
         match strip_build_prefix file with
-        | Some relative ->
+        | Some relative -> (
             (* Find project root by looking for dune-project *)
             let rec find_root dir =
               if Sys.file_exists (Filename.concat dir "dune-project") then
@@ -318,7 +315,7 @@ let impl str =
                 let parent = Filename.dirname dir in
                 if parent = dir then None else find_root parent
             in
-            (match find_root (Sys.getcwd ()) with
+            match find_root (Sys.getcwd ()) with
             | Some root -> Filename.concat root relative
             | None -> file)
         | None -> file
@@ -326,14 +323,14 @@ let impl str =
       let dir = Filename.dirname file in
       (* Only update if different from current - avoids reloading config *)
       if !source_dir <> Some dir then (
-        source_dir := Some dir ;
+        source_dir := Some dir;
         forbidden_items := None)
-  | _ -> ()) ;
-  checker#structure str ;
+  | _ -> ());
+  checker#structure str;
   str
 
 let () =
   Driver.add_arg "--config"
     (Arg.String (fun s -> config_path_override := Some s))
-    ~doc:"PATH Path to .ppx_forbid config file" ;
+    ~doc:"PATH Path to .ppx_forbid config file";
   Driver.register_transformation ~impl "ppx_forbid"

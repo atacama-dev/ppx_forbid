@@ -95,6 +95,51 @@ let[@allow_forbidden "logger writes to stderr by design"] log msg =
 
 The reason string is required and documents *why* the exception is acceptable.
 
+## Enforcing required calls
+
+This repository also ships `ppx_enforce`, the mirror image of `ppx_forbid`.
+It raises a compile-time error when a source file does not contain a required
+function call.
+
+Install it with:
+
+```bash
+opam install ppx_enforce
+```
+
+Add it to your `dune` file:
+
+```dune
+(library
+ (name my_widgets)
+ (preprocess (pps ppx_enforce))
+ (preprocessor_deps .ppx_enforce))
+```
+
+Create a `.ppx_enforce` config:
+
+```
+call Miaou_registry.register "Widget modules must self-register"
+```
+
+Each processed file must now contain a matching call such as:
+
+```ocaml
+let () = Miaou_registry.register ~name:"my-widget" ~mli:"..." ()
+```
+
+If a file is intentionally outside the rule, add a file-level exemption:
+
+```ocaml
+[@@@enforce_exempt]
+```
+
+or exempt one requirement:
+
+```ocaml
+[@@@enforce_exempt "Miaou_registry.register"]
+```
+
 ## Default rules
 
 When no `.ppx_forbid` file is found, a single default rule applies:
@@ -131,6 +176,7 @@ function Printf.printf "Use logging or TUI display functions"
 
 - OCaml >= 4.14
 - ppxlib >= 0.28.0
+- dune >= 3.13
 
 ## License
 

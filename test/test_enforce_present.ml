@@ -16,5 +16,4 @@ module Registry = struct
 end
 
 let () = Registry.register ~name:"test" ~mli:"val x : int" ()
-
 let () = print_endline "ppx_enforce present-call test passed"
