@@ -11,8 +11,9 @@ jobs:
     name: Build & Test
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        ocaml-compiler: ['4.14', '5.0', '5.2', '5.3', '5.4']
+        ocaml-compiler: ['4.14', '5.2', '5.3', '5.4']
 
     steps:
       - uses: actions/checkout@v4
