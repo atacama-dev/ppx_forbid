@@ -1,0 +1,448 @@
+;; Driver cases over rules.ppx_forbid. Every *fail_* file must be rejected with
+;; the message recorded in failures.expected; every ok file must be accepted.
+
+(rule
+ (deps
+  rules.ppx_forbid
+  async_fail_alias.ml
+  async_fail_attr_elsewhere.ml
+  async_fail_call.ml
+  async_fail_constructor.ml
+  async_fail_inherit.ml
+  async_fail_label.ml
+  async_fail_module_type.ml
+  async_fail_new.ml
+  async_fail_pattern.ml
+  async_fail_record.ml
+  fail_alias.ml
+  fail_first_class.ml
+  fail_function.ml
+  fail_functor_arg.ml
+  fail_include.ml
+  fail_let_open.ml
+  fail_local_open.ml
+  fail_mangled.ml
+  fail_open.ml
+  fail_open_bang.ml
+  fail_qualified.ml
+  fail_stdlib_prefix.ml
+  fail_submodule.ml)
+ (action
+  (with-stderr-to
+   failures.out
+   (with-stdout-to
+    %{null}
+    (progn
+     (with-accepted-exit-codes
+      1
+      (run
+       %{exe:../driver/driver.exe}
+       --config
+       rules.ppx_forbid
+       -impl
+       async_fail_alias.ml))
+     (with-accepted-exit-codes
+      1
+      (run
+       %{exe:../driver/driver.exe}
+       --config
+       rules.ppx_forbid
+       -impl
+       async_fail_attr_elsewhere.ml))
+     (with-accepted-exit-codes
+      1
+      (run
+       %{exe:../driver/driver.exe}
+       --config
+       rules.ppx_forbid
+       -impl
+       async_fail_call.ml))
+     (with-accepted-exit-codes
+      1
+      (run
+       %{exe:../driver/driver.exe}
+       --config
+       rules.ppx_forbid
+       -impl
+       async_fail_constructor.ml))
+     (with-accepted-exit-codes
+      1
+      (run
+       %{exe:../driver/driver.exe}
+       --config
+       rules.ppx_forbid
+       -impl
+       async_fail_inherit.ml))
+     (with-accepted-exit-codes
+      1
+      (run
+       %{exe:../driver/driver.exe}
+       --config
+       rules.ppx_forbid
+       -impl
+       async_fail_label.ml))
+     (with-accepted-exit-codes
+      1
+      (run
+       %{exe:../driver/driver.exe}
+       --config
+       rules.ppx_forbid
+       -impl
+       async_fail_module_type.ml))
+     (with-accepted-exit-codes
+      1
+      (run
+       %{exe:../driver/driver.exe}
+       --config
+       rules.ppx_forbid
+       -impl
+       async_fail_new.ml))
+     (with-accepted-exit-codes
+      1
+      (run
+       %{exe:../driver/driver.exe}
+       --config
+       rules.ppx_forbid
+       -impl
+       async_fail_pattern.ml))
+     (with-accepted-exit-codes
+      1
+      (run
+       %{exe:../driver/driver.exe}
+       --config
+       rules.ppx_forbid
+       -impl
+       async_fail_record.ml))
+     (with-accepted-exit-codes
+      1
+      (run
+       %{exe:../driver/driver.exe}
+       --config
+       rules.ppx_forbid
+       -impl
+       fail_alias.ml))
+     (with-accepted-exit-codes
+      1
+      (run
+       %{exe:../driver/driver.exe}
+       --config
+       rules.ppx_forbid
+       -impl
+       fail_first_class.ml))
+     (with-accepted-exit-codes
+      1
+      (run
+       %{exe:../driver/driver.exe}
+       --config
+       rules.ppx_forbid
+       -impl
+       fail_function.ml))
+     (with-accepted-exit-codes
+      1
+      (run
+       %{exe:../driver/driver.exe}
+       --config
+       rules.ppx_forbid
+       -impl
+       fail_functor_arg.ml))
+     (with-accepted-exit-codes
+      1
+      (run
+       %{exe:../driver/driver.exe}
+       --config
+       rules.ppx_forbid
+       -impl
+       fail_include.ml))
+     (with-accepted-exit-codes
+      1
+      (run
+       %{exe:../driver/driver.exe}
+       --config
+       rules.ppx_forbid
+       -impl
+       fail_let_open.ml))
+     (with-accepted-exit-codes
+      1
+      (run
+       %{exe:../driver/driver.exe}
+       --config
+       rules.ppx_forbid
+       -impl
+       fail_local_open.ml))
+     (with-accepted-exit-codes
+      1
+      (run
+       %{exe:../driver/driver.exe}
+       --config
+       rules.ppx_forbid
+       -impl
+       fail_mangled.ml))
+     (with-accepted-exit-codes
+      1
+      (run
+       %{exe:../driver/driver.exe}
+       --config
+       rules.ppx_forbid
+       -impl
+       fail_open.ml))
+     (with-accepted-exit-codes
+      1
+      (run
+       %{exe:../driver/driver.exe}
+       --config
+       rules.ppx_forbid
+       -impl
+       fail_open_bang.ml))
+     (with-accepted-exit-codes
+      1
+      (run
+       %{exe:../driver/driver.exe}
+       --config
+       rules.ppx_forbid
+       -impl
+       fail_qualified.ml))
+     (with-accepted-exit-codes
+      1
+      (run
+       %{exe:../driver/driver.exe}
+       --config
+       rules.ppx_forbid
+       -impl
+       fail_stdlib_prefix.ml))
+     (with-accepted-exit-codes
+      1
+      (run
+       %{exe:../driver/driver.exe}
+       --config
+       rules.ppx_forbid
+       -impl
+       fail_submodule.ml)))))))
+
+(rule
+ (alias runtest)
+ (action
+  (diff failures.expected failures.out)))
+
+(rule
+ (alias runtest)
+ (deps rules.ppx_forbid async_ok_allowed.ml)
+ (action
+  (with-outputs-to
+   %{null}
+   (run
+    %{exe:../driver/driver.exe}
+    --config
+    rules.ppx_forbid
+    -impl
+    async_ok_allowed.ml))))
+
+(rule
+ (alias runtest)
+ (deps rules.ppx_forbid codec_ok_exempt.ml)
+ (action
+  (with-outputs-to
+   %{null}
+   (run
+    %{exe:../driver/driver.exe}
+    --config
+    rules.ppx_forbid
+    -impl
+    codec_ok_exempt.ml))))
+
+(rule
+ (alias runtest)
+ (deps rules.ppx_forbid ok_attribute.ml)
+ (action
+  (with-outputs-to
+   %{null}
+   (run
+    %{exe:../driver/driver.exe}
+    --config
+    rules.ppx_forbid
+    -impl
+    ok_attribute.ml))))
+
+(rule
+ (alias runtest)
+ (deps rules.ppx_forbid ok_other_prefix.ml)
+ (action
+  (with-outputs-to
+   %{null}
+   (run
+    %{exe:../driver/driver.exe}
+    --config
+    rules.ppx_forbid
+    -impl
+    ok_other_prefix.ml))))
+
+(rule
+ (alias runtest)
+ (deps rules.ppx_forbid ok_out_of_scope.ml)
+ (action
+  (with-outputs-to
+   %{null}
+   (run
+    %{exe:../driver/driver.exe}
+    --config
+    rules.ppx_forbid
+    -impl
+    ok_out_of_scope.ml))))
+
+(rule
+ (alias runtest)
+ (deps rules.ppx_forbid ok_types_only.ml)
+ (action
+  (with-outputs-to
+   %{null}
+   (run
+    %{exe:../driver/driver.exe}
+    --config
+    rules.ppx_forbid
+    -impl
+    ok_types_only.ml))))
+
+;; A malformed, unknown or dangling config line, a missing include and a missing
+;; --config file are config errors.
+
+(rule
+ (deps
+  plain.ml
+  bad_allow.ppx_forbid
+  bad_allow_syntax.ppx_forbid
+  bad_allow_without_rules.ppx_forbid
+  bad_exempt_reason.ppx_forbid
+  bad_function_no_module.ppx_forbid
+  bad_missing_include.ppx_forbid
+  bad_module_no_reason.ppx_forbid
+  bad_only_syntax.ppx_forbid
+  bad_unknown_directive.ppx_forbid
+  bad_unknown_target.ppx_forbid)
+ (action
+  (with-stderr-to
+   config_errors.out
+   (with-stdout-to
+    %{null}
+    (progn
+     (with-accepted-exit-codes
+      2
+      (run
+       %{exe:../driver/driver.exe}
+       --config
+       bad_allow.ppx_forbid
+       -impl
+       plain.ml))
+     (with-accepted-exit-codes
+      2
+      (run
+       %{exe:../driver/driver.exe}
+       --config
+       bad_allow_syntax.ppx_forbid
+       -impl
+       plain.ml))
+     (with-accepted-exit-codes
+      2
+      (run
+       %{exe:../driver/driver.exe}
+       --config
+       bad_allow_without_rules.ppx_forbid
+       -impl
+       plain.ml))
+     (with-accepted-exit-codes
+      2
+      (run
+       %{exe:../driver/driver.exe}
+       --config
+       bad_exempt_reason.ppx_forbid
+       -impl
+       plain.ml))
+     (with-accepted-exit-codes
+      2
+      (run
+       %{exe:../driver/driver.exe}
+       --config
+       bad_function_no_module.ppx_forbid
+       -impl
+       plain.ml))
+     (with-accepted-exit-codes
+      2
+      (run
+       %{exe:../driver/driver.exe}
+       --config
+       bad_missing_include.ppx_forbid
+       -impl
+       plain.ml))
+     (with-accepted-exit-codes
+      2
+      (run
+       %{exe:../driver/driver.exe}
+       --config
+       bad_module_no_reason.ppx_forbid
+       -impl
+       plain.ml))
+     (with-accepted-exit-codes
+      2
+      (run
+       %{exe:../driver/driver.exe}
+       --config
+       bad_only_syntax.ppx_forbid
+       -impl
+       plain.ml))
+     (with-accepted-exit-codes
+      2
+      (run
+       %{exe:../driver/driver.exe}
+       --config
+       bad_unknown_directive.ppx_forbid
+       -impl
+       plain.ml))
+     (with-accepted-exit-codes
+      2
+      (run
+       %{exe:../driver/driver.exe}
+       --config
+       bad_unknown_target.ppx_forbid
+       -impl
+       plain.ml))
+     (with-accepted-exit-codes
+      2
+      (run
+       %{exe:../driver/driver.exe}
+       --config
+       no_such.ppx_forbid
+       -impl
+       plain.ml)))))))
+
+(rule
+ (alias runtest)
+ (action
+  (diff config_errors.expected config_errors.out)))
+
+;; --report prints every hit (forbidden, suppressed, exempt) and succeeds.
+
+(rule
+ (deps rules.ppx_forbid async_report.ml codec_report.ml)
+ (action
+  (with-stderr-to
+   report.out
+   (with-stdout-to
+    %{null}
+    (progn
+     (run
+      %{exe:../driver/driver.exe}
+      --config
+      rules.ppx_forbid
+      --report
+      -impl
+      async_report.ml)
+     (run
+      %{exe:../driver/driver.exe}
+      --config
+      rules.ppx_forbid
+      --report
+      -impl
+      codec_report.ml))))))
+
+(rule
+ (alias runtest)
+ (action
+  (diff report.expected report.out)))

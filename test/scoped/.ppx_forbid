@@ -1,0 +1,5 @@
+# Compiled by the real ppx in a dune build: these files must all be accepted.
+module Forbidden_mod "test: only async_* files are checked"
+allow Forbidden_mod.exact
+only Forbidden_mod async_*.ml
+exempt Forbidden_mod async_codec.ml "test: named boundary"

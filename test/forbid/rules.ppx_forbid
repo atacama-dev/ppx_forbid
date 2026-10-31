@@ -1,0 +1,8 @@
+# Rules exercised by the tests in this directory.
+module Yojson.Safe.Util "use a typed codec"
+exempt Yojson.Safe.Util codec_*.ml "codec boundary"
+module Exec "async code must not call the executor"
+allow Exec.exact
+only Exec async_*.ml
+function Unix.sleep "use Eio.Time.sleep"
+module Obj "unsafe"

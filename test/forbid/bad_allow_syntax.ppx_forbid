@@ -1,0 +1,2 @@
+module Obj "x"
+allow Obj.repr Obj.magic

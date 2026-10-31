@@ -1,0 +1,4 @@
+async_report.ml:1:5: forbidden module Yojson.Safe.Util
+async_report.ml:3:11: forbidden module Exec
+async_report.ml:5:10: suppressed module Yojson.Safe.Util
+codec_report.ml:1:10: exempt module Yojson.Safe.Util

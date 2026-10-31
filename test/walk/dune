@@ -1,0 +1,40 @@
+;; The config is found by walking up from the source file (no --config), from
+;; an ancestor directory, inside a nested dune project, and at the root of a
+;; dune project (rootproj) for a source in a sub-directory.
+
+(rule
+ (deps
+  .ppx_forbid
+  sub/async_bad.ml
+  sub/plain_ok.ml
+  sub/async_exempt.ml
+  nested/lib/.ppx_forbid
+  nested/lib/async_bad.ml
+  nested/lib/other_ok.ml
+  rootproj/.ppx_forbid
+  rootproj/lib/async_x.ml
+  rootproj/lib/plain_x.ml)
+ (action
+  (with-stderr-to
+   walk.out
+   (with-stdout-to
+    %{null}
+    (progn
+     (with-accepted-exit-codes
+      1
+      (run %{exe:../driver/driver.exe} -impl sub/async_bad.ml))
+     (run %{exe:../driver/driver.exe} -impl sub/plain_ok.ml)
+     (run %{exe:../driver/driver.exe} -impl sub/async_exempt.ml)
+     (with-accepted-exit-codes
+      1
+      (run %{exe:../driver/driver.exe} -impl nested/lib/async_bad.ml))
+     (run %{exe:../driver/driver.exe} -impl nested/lib/other_ok.ml)
+     (with-accepted-exit-codes
+      1
+      (run %{exe:../driver/driver.exe} -impl rootproj/lib/async_x.ml))
+     (run %{exe:../driver/driver.exe} -impl rootproj/lib/plain_x.ml))))))
+
+(rule
+ (alias runtest)
+ (action
+  (diff walk.expected walk.out)))

@@ -1,0 +1,4 @@
+# An ancestor config: globs are relative to this directory.
+module Exec "async code must not call the executor"
+only Exec sub/async_*.ml
+exempt Exec sub/async_exempt.ml "test exemption"

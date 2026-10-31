@@ -1,0 +1,3 @@
+# A config at the project root (next to dune-project); globs name sub-dirs.
+module Exec "no executor from the project root config"
+only Exec lib/async_*.ml

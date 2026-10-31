@@ -1,0 +1,7 @@
+; A standalone ppx_forbid driver, so that tests can check that a file fails.
+
+(executable
+ (name driver)
+ (modules driver)
+ (libraries ppx_forbid ppxlib)
+ (link_flags (-linkall)))

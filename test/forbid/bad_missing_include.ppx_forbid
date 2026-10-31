@@ -1,0 +1,2 @@
+module Obj "x"
+include does_not_exist.ppx_forbid

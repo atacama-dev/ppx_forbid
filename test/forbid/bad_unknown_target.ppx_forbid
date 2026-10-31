@@ -1,0 +1,2 @@
+module Obj "unsafe"
+only Objx src/*.ml
