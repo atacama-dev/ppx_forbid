@@ -1,0 +1,18 @@
+File "sub/async_bad.ml", line 1, characters 11-19:
+1 | let f () = Exec.run ()
+               ^^^^^^^^
+Error: Forbidden module: Exec is not allowed.
+Reason: async code must not call the executor
+Use [@allow_forbidden "reason"] to suppress.
+File "nested/lib/async_bad.ml", line 1, characters 11-19:
+1 | let f () = Exec.run ()
+               ^^^^^^^^
+Error: Forbidden module: Exec is not allowed.
+Reason: no executor here
+Use [@allow_forbidden "reason"] to suppress.
+File "rootproj/lib/async_x.ml", line 1, characters 11-19:
+1 | let f () = Exec.run ()
+               ^^^^^^^^
+Error: Forbidden module: Exec is not allowed.
+Reason: no executor from the project root config
+Use [@allow_forbidden "reason"] to suppress.

@@ -1,0 +1,5 @@
+(library
+ (name scoped)
+ (preprocess
+  (pps ppx_forbid))
+ (preprocessor_deps .ppx_forbid))

@@ -1,0 +1,138 @@
+File "async_fail_alias.ml", line 1, characters 11-15:
+1 | module P = Exec
+               ^^^^
+Error: Forbidden module: Exec is not allowed.
+Reason: async code must not call the executor
+Use [@allow_forbidden "reason"] to suppress.
+File "async_fail_attr_elsewhere.ml", line 2, characters 11-19:
+2 | let b () = Exec.run ()
+               ^^^^^^^^
+Error: Forbidden module: Exec is not allowed.
+Reason: async code must not call the executor
+Use [@allow_forbidden "reason"] to suppress.
+File "async_fail_call.ml", line 1, characters 11-19:
+1 | let f () = Exec.run ()
+               ^^^^^^^^
+Error: Forbidden module: Exec is not allowed.
+Reason: async code must not call the executor
+Use [@allow_forbidden "reason"] to suppress.
+File "async_fail_constructor.ml", line 1, characters 17-26:
+1 | let f () = raise Exec.Boom
+                     ^^^^^^^^^
+Error: Forbidden module: Exec is not allowed.
+Reason: async code must not call the executor
+Use [@allow_forbidden "reason"] to suppress.
+File "async_fail_inherit.ml", line 3, characters 12-23:
+3 |     inherit Exec.runner
+                ^^^^^^^^^^^
+Error: Forbidden module: Exec is not allowed.
+Reason: async code must not call the executor
+Use [@allow_forbidden "reason"] to suppress.
+File "async_fail_label.ml", line 1, characters 12-22:
+1 | let f r = r.Exec.state
+                ^^^^^^^^^^
+Error: Forbidden module: Exec is not allowed.
+Reason: async code must not call the executor
+Use [@allow_forbidden "reason"] to suppress.
+File "async_fail_module_type.ml", line 1, characters 16-22:
+1 | module type T = Exec.S
+                    ^^^^^^
+Error: Forbidden module: Exec is not allowed.
+Reason: async code must not call the executor
+Use [@allow_forbidden "reason"] to suppress.
+File "async_fail_new.ml", line 1, characters 12-23:
+1 | let o = new Exec.runner
+                ^^^^^^^^^^^
+Error: Forbidden module: Exec is not allowed.
+Reason: async code must not call the executor
+Use [@allow_forbidden "reason"] to suppress.
+File "async_fail_pattern.ml", line 1, characters 17-26:
+1 | let f = function Exec.Done -> () | _ -> ()
+                     ^^^^^^^^^
+Error: Forbidden module: Exec is not allowed.
+Reason: async code must not call the executor
+Use [@allow_forbidden "reason"] to suppress.
+File "async_fail_record.ml", line 1, characters 10-20:
+1 | let r = { Exec.state = 1 }
+              ^^^^^^^^^^
+Error: Forbidden module: Exec is not allowed.
+Reason: async code must not call the executor
+Use [@allow_forbidden "reason"] to suppress.
+File "fail_alias.ml", line 1, characters 11-27:
+1 | module U = Yojson.Safe.Util
+               ^^^^^^^^^^^^^^^^
+Error: Forbidden module: Yojson.Safe.Util is not allowed.
+Reason: use a typed codec
+Use [@allow_forbidden "reason"] to suppress.
+File "fail_first_class.ml", line 1, characters 16-32:
+1 | let m = (module Yojson.Safe.Util : S)
+                    ^^^^^^^^^^^^^^^^
+Error: Forbidden module: Yojson.Safe.Util is not allowed.
+Reason: use a typed codec
+Use [@allow_forbidden "reason"] to suppress.
+File "fail_function.ml", line 1, characters 11-21:
+1 | let f () = Unix.sleep 1
+               ^^^^^^^^^^
+Error: Forbidden call: Unix.sleep is not allowed.
+Suggestion: use Eio.Time.sleep
+Use [@allow_forbidden "reason"] to suppress.
+File "fail_functor_arg.ml", line 1, characters 14-30:
+1 | module M = F (Yojson.Safe.Util)
+                  ^^^^^^^^^^^^^^^^
+Error: Forbidden module: Yojson.Safe.Util is not allowed.
+Reason: use a typed codec
+Use [@allow_forbidden "reason"] to suppress.
+File "fail_include.ml", line 1, characters 8-24:
+1 | include Yojson.Safe.Util
+            ^^^^^^^^^^^^^^^^
+Error: Forbidden module: Yojson.Safe.Util is not allowed.
+Reason: use a typed codec
+Use [@allow_forbidden "reason"] to suppress.
+File "fail_let_open.ml", line 2, characters 11-27:
+2 |   let open Yojson.Safe.Util in
+               ^^^^^^^^^^^^^^^^
+Error: Forbidden module: Yojson.Safe.Util is not allowed.
+Reason: use a typed codec
+Use [@allow_forbidden "reason"] to suppress.
+File "fail_local_open.ml", line 1, characters 10-26:
+1 | let f j = Yojson.Safe.Util.(member "k" j)
+              ^^^^^^^^^^^^^^^^
+Error: Forbidden module: Yojson.Safe.Util is not allowed.
+Reason: use a typed codec
+Use [@allow_forbidden "reason"] to suppress.
+File "fail_mangled.ml", line 1, characters 8-25:
+1 | let f = Stdlib__Obj.magic
+            ^^^^^^^^^^^^^^^^^
+Error: Forbidden module: Obj is not allowed.
+Reason: unsafe
+Use [@allow_forbidden "reason"] to suppress.
+File "fail_open.ml", line 1, characters 5-21:
+1 | open Yojson.Safe.Util
+         ^^^^^^^^^^^^^^^^
+Error: Forbidden module: Yojson.Safe.Util is not allowed.
+Reason: use a typed codec
+Use [@allow_forbidden "reason"] to suppress.
+File "fail_open_bang.ml", line 1, characters 6-22:
+1 | open! Yojson.Safe.Util
+          ^^^^^^^^^^^^^^^^
+Error: Forbidden module: Yojson.Safe.Util is not allowed.
+Reason: use a typed codec
+Use [@allow_forbidden "reason"] to suppress.
+File "fail_qualified.ml", line 1, characters 10-33:
+1 | let f j = Yojson.Safe.Util.member "k" j
+              ^^^^^^^^^^^^^^^^^^^^^^^
+Error: Forbidden module: Yojson.Safe.Util is not allowed.
+Reason: use a typed codec
+Use [@allow_forbidden "reason"] to suppress.
+File "fail_stdlib_prefix.ml", line 1, characters 8-24:
+1 | let f = Stdlib.Obj.magic
+            ^^^^^^^^^^^^^^^^
+Error: Forbidden module: Obj is not allowed.
+Reason: unsafe
+Use [@allow_forbidden "reason"] to suppress.
+File "fail_submodule.ml", line 1, characters 11-34:
+1 | module S = Yojson.Safe.Util.Nested
+               ^^^^^^^^^^^^^^^^^^^^^^^
+Error: Forbidden module: Yojson.Safe.Util is not allowed.
+Reason: use a typed codec
+Use [@allow_forbidden "reason"] to suppress.

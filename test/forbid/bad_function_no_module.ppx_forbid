@@ -1,0 +1,2 @@
+module Obj "x"
+function sleep "no module"

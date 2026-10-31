@@ -1,0 +1,3 @@
+# A config inside a nested dune project.
+module Exec "no executor here"
+only Exec async_*.ml
