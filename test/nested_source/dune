@@ -1,0 +1,9 @@
+(rule
+ (alias runtest)
+ (deps
+  ../../dune-project
+  ../../src/dune
+  ../../src/ppx_forbid.ml
+  ../../src/ppx_enforce.ml)
+ (action
+  (run bash %{dep:test_nested_source.sh} %{workspace_root})))

@@ -1,7 +1,10 @@
 (* Unit tests of the path and module-path helpers. *)
 open Ppx_forbid
 
-let check name cond = if not cond then failwith ("test_paths: " ^ name)
+let check name cond =
+  if not cond then (
+    prerr_endline ("test_paths: " ^ name);
+    exit 1)
 
 (* A config at a project root (next to dune-project, with no dune-project
    above it) scopes a source in a sub-directory. The project is created in the
@@ -109,6 +112,60 @@ let symlinked_build_dir_maps_to_the_source_tree () =
         (to_source (physical ^ "/.sandbox/h/default/lib/a.ml")
         = "/src/proj/lib/a.ml"))
 
+(* A real source root may itself be cloned below another project's _build.
+   The active Dune context still takes precedence over source membership. *)
+let nested_source_root_keeps_source_paths () =
+  let root = "/p/_build/scratch/ca-source" in
+  Unix.putenv "DUNE_SOURCEROOT" root;
+  Unix.putenv "INSIDE_DUNE" "/p/_build/scratch/ca-build/default";
+  check "nested source file unchanged"
+    (to_source (root ^ "/lib/a.ml") = root ^ "/lib/a.ml");
+  check "nested source root unchanged" (to_source root = root);
+  check "nested source external context"
+    (to_source "/p/_build/scratch/ca-build/default/lib/a.ml"
+    = root ^ "/lib/a.ml");
+  check "nested source external sandbox"
+    (to_source "/p/_build/scratch/ca-build/.sandbox/h/default/lib/a.ml"
+    = root ^ "/lib/a.ml");
+  check "source root boundary keeps legacy fallback"
+    (to_source (root ^ "-other/lib/a.ml") = root ^ "/ca-source-other/lib/a.ml");
+  Unix.putenv "INSIDE_DUNE" (root ^ "/_build/default");
+  check "context inside source root still maps"
+    (to_source (root ^ "/_build/default/lib/a.ml") = root ^ "/lib/a.ml");
+  check "sandbox inside source root still maps"
+    (to_source (root ^ "/_build/.sandbox/h/default/lib/a.ml")
+    = root ^ "/lib/a.ml");
+  Unix.putenv "DUNE_SOURCEROOT" "";
+  Unix.putenv "INSIDE_DUNE" "";
+  check "standalone fallback still maps"
+    (to_source "/p/_build/default/lib/a.ml" = "/p/lib/a.ml")
+
+let symlinked_nested_source_root_keeps_source_paths () =
+  let tmp =
+    Filename.concat
+      (Filename.get_temp_dir_name ())
+      (Printf.sprintf "ppx_forbid_nested_%d" (Unix.getpid ()))
+  in
+  let build = Filename.concat tmp "_build" in
+  let source = Filename.concat build "source" in
+  let lib = Filename.concat source "lib" in
+  let link = Filename.concat tmp "source-link" in
+  let dirs = [ tmp; build; source; lib ] in
+  List.iter (fun d -> Unix.mkdir d 0o755) dirs;
+  Fun.protect
+    ~finally:(fun () ->
+      (try Unix.unlink link with Unix.Unix_error _ -> ());
+      List.iter Unix.rmdir (List.rev dirs))
+    (fun () ->
+      Unix.symlink source link;
+      Unix.putenv "DUNE_SOURCEROOT" link;
+      Unix.putenv "INSIDE_DUNE" (Filename.concat tmp "external/default");
+      let expected = Filename.concat (physical_dir source) "lib/a.ml" in
+      check "physical nested source unchanged"
+        (to_source (Filename.concat source "lib/a.ml") = expected);
+      check "symlinked nested source unchanged"
+        (to_source (Filename.concat link "lib/a.ml") = expected))
+
 let () =
   check "build context"
     (strip_build_prefix "/p/_build/default/lib/a.ml" = Some ("/p", "lib/a.ml"));
@@ -140,4 +197,6 @@ let () =
   symlinked_config_matches_the_physical_source ();
   dune_sandbox_maps_to_the_source_tree ();
   symlinked_build_dir_maps_to_the_source_tree ();
+  nested_source_root_keeps_source_paths ();
+  symlinked_nested_source_root_keeps_source_paths ();
   print_endline "test_paths: ok"
