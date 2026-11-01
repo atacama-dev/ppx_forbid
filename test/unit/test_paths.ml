@@ -147,10 +147,11 @@ let symlinked_nested_source_root_keeps_source_paths () =
       (Printf.sprintf "ppx_forbid_nested_%d" (Unix.getpid ()))
   in
   let build = Filename.concat tmp "_build" in
-  let source = Filename.concat build "source" in
+  let scratch = Filename.concat build "scratch" in
+  let source = Filename.concat scratch "ca-source" in
   let lib = Filename.concat source "lib" in
   let link = Filename.concat tmp "source-link" in
-  let dirs = [ tmp; build; source; lib ] in
+  let dirs = [ tmp; build; scratch; source; lib ] in
   List.iter (fun d -> Unix.mkdir d 0o755) dirs;
   Fun.protect
     ~finally:(fun () ->
