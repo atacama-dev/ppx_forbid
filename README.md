@@ -131,8 +131,11 @@ With one or more `only` lines, a rule applies only to the matching files. An
 Inside a dune build, source paths are mapped back to the source tree through
 `INSIDE_DUNE` and `DUNE_SOURCEROOT`, including dune's sandbox. Configs found
 by walking up from the source file therefore also work with an external
-`--build-dir`, a named build context and nested dune projects. A path passed
-with `--config` is read as given, from the build context root. It must exist
+`--build-dir`, a named build context and nested dune projects. A path already
+in the source tree stays a source path even if the repository itself is
+cloned below another project's `_build` directory. Genuine build-context and
+sandbox paths are mapped first, including contexts inside the source root.
+A path passed with `--config` is read as given, from the build context root. It must exist
 there, so declare it with `(preprocessor_deps ...)`. Declare walk-up configs
 the same way, so that dune re-checks files when a config changes.
 

@@ -210,6 +210,13 @@ let to_source path =
   in
   match in_context with
   | Some p -> p
+  | None
+    when match getenv_path "DUNE_SOURCEROOT" with
+         | Some root -> abs = root || Option.is_some (below root abs)
+         | None -> false ->
+      (* An enclosing project's _build is not this source tree's build
+         directory. Genuine context/sandbox paths were handled above. *)
+      abs
   | None -> (
       match strip_build_prefix abs with
       | Some (root, rel) -> normalize (Filename.concat (source_root root) rel)
